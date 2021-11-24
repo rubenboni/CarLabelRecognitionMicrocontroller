@@ -4,7 +4,8 @@ import OpencvYolo
 import threading
 import numpy as np
 import ThreadConnections
-import json
+import time
+import logging
 import Plate
 
 
@@ -60,6 +61,7 @@ def sendToCamera(cameraConnection, characterData,cameraSemaphore,semaphoreConnec
 
 
 
+
 red=OpencvYolo.Cnn('yolov4-tiny-custom.cfg','yolov4-tiny-custom_final.weights')
 imgs=[]
 sockets=[]
@@ -72,6 +74,8 @@ cameraSemaphore = threading.Semaphore(value=0)
 
 threadConnection= ThreadConnections.ThreadConnections(semaphoreConnections,listConnections,cameraSemaphore)
 threadConnection.start()
+
+logging.basicConfig(level=logging.DEBUG)
 
 
 
@@ -117,7 +121,7 @@ while True:
                 continue
         semaphoreConnections.release()
       
-
+        logging.debug("Imagenes a escanear:",len(imgs)) 
         if(len(imgs) == 0):
             continue
 
@@ -126,7 +130,10 @@ while True:
         
         for img in imgs:
             #Pasa a la red la imagen y devuelve las matriculas que vea en la imagen
+            logging.debug("Búsqueda de matrícula")
+            timestart=time.time() 
             labels=red.load_image(img)
+            logging.debug("Tiempo en la búsqueda de la matrícula:",time.time()-timestart,"s | Matrículas encontradas:",len(labels))
 
             if (len(labels) == 0):
                 continue
