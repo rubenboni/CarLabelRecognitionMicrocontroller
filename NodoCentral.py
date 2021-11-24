@@ -121,7 +121,7 @@ while True:
                 continue
         semaphoreConnections.release()
       
-        logging.debug("Imagenes a escanear:",len(imgs)) 
+        logging.debug("Imagenes a escanear:",str(len(imgs))) 
         if(len(imgs) == 0):
             continue
 
@@ -133,7 +133,7 @@ while True:
             logging.debug("Búsqueda de matrícula")
             timestart=time.time() 
             labels=red.load_image(img)
-            logging.debug("Tiempo en la búsqueda de la matrícula:",time.time()-timestart,"s | Matrículas encontradas:",len(labels))
+            logging.debug("Tiempo en la búsqueda de la matrícula:",str(time.time()-timestart),"s | Matrículas encontradas:",str(len(labels)))
 
             if (len(labels) == 0):
                 continue
