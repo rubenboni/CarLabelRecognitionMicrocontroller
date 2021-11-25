@@ -35,7 +35,7 @@ class ThreadConnections (threading.Thread):
                 socketServer = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 server_address = ("192.168.0.21",12100)
                 socketServer.bind(server_address)
-                socketServer.listen()
+                socketServer.listen(10)
                 print("Escuchando peticiones:")
                 
                 while True:
