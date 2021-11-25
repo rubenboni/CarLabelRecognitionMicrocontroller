@@ -39,6 +39,7 @@ class ThreadConnections (threading.Thread):
                 print("Escuchando peticiones:")
                 
                 while True:
+                    logging.debug("Esperando conexión...")
                     connection,ipClient =socketServer.accept()
                     
                     self.semaphoreConnection.acquire()
