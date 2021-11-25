@@ -3,7 +3,7 @@ class Plate :
     listDataCharacters=None
     probability=0
     formatPlate=""
-    patterns = ["ccnnnnc","ccnnnncc","ccccccc","ccnnnnn","ccnnnnnn","cccnnnnc","ccnnnnc","cnnnnccc"]
+    patterns = ["ccnnnnc","ccnnnncc","ccccccc","ccnnnnn","ccnnnnnn","cccnnnnc","ccnnnnc","cnnnnccc","nnnnccc"]
     matchedPattern=None
     
     def __init__(self,_listDataCharacters):

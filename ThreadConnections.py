@@ -50,7 +50,6 @@ class ThreadConnections (threading.Thread):
                     print("Se ha conectado",ipClient, "en el puerto", 12100)
             except Exception as excep:
                 print("Error iniciando el servidor")
-                print(excep)
                 logging.exception(excep)
                 time.sleep(10)
                 continue
