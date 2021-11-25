@@ -48,6 +48,7 @@ class ThreadConnections (threading.Thread):
                     
                     self.cameraSemaphore.release()
                     print("Se ha conectado",ipClient, "en el puerto", 12100)
+                    time.sleep(2)
             except:
                 print("Error iniciando el servidor")
                 time.sleep(10)
