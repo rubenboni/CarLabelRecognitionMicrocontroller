@@ -72,11 +72,12 @@ plates=[]
 
 cameraSemaphore = threading.Semaphore(value=0)
 
-threadConnection= ThreadConnections.ThreadConnections(semaphoreConnections,listConnections,cameraSemaphore)
-threadConnection.start()
 
 logging.basicConfig(level=logging.DEBUG)
 
+
+threadConnection= ThreadConnections.ThreadConnections(semaphoreConnections,listConnections,cameraSemaphore)
+threadConnection.start()
 
 
 while True:
