@@ -41,14 +41,14 @@ class ThreadConnections (threading.Thread):
                 while True:
                     logging.debug("Esperando conexión...")
                     connection,ipClient =socketServer.accept()
-                    
+                    logging.debug("Añadiendo conexión a la lista")
                     self.semaphoreConnection.acquire()
                     self.listConnections.append(CameraConnection(connection,ipClient[0]))
                     self.semaphoreConnection.release()
-                    
+                    logging.debug("Conexión añadida")
                     self.cameraSemaphore.release()
                     print("Se ha conectado",ipClient, "en el puerto", 12100)
-            except (excep):
+            except Exception as excep:
                 print("Error iniciando el servidor")
                 print(excep)
                 logging.exception(excep)
