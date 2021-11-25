@@ -114,7 +114,7 @@ while True:
                 
                 if(frame is not None):
                     imgs.append(frame)
-                    cv2.imshow("cameraIP: "+str(c.ip),frame)
+                    #cv2.imshow("cameraIP: "+str(c.ip),frame)
                 cv2.waitKey(1)
                 cap.release()
             except:
