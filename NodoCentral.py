@@ -133,7 +133,7 @@ while True:
             logging.debug("Búsqueda de matrícula")
             timestart=time.time() 
             labels=red.load_image(img)
-            logging.debug("Tiempo en la búsqueda de la matrícula: "+str(time.time()-timestart),"s | Matrículas encontradas: "+str(len(labels)))
+            logging.debug("Tiempo en la búsqueda de la matrícula: "+str(time.time()-timestart)+" s | Matrículas encontradas: "+str(len(labels)))
 
             if (len(labels) == 0):
                 continue
