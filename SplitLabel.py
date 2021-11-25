@@ -12,7 +12,7 @@ def Split(src):
 
 
 
-    mask = cv2.inRange(src,np.array([0,0,0]),np.array([100,100,100])) 
+    mask = cv2.inRange(src,np.array([0,0,0]),np.array([130,130,130])) 
 
     
     cv2.imwrite('mask.png',mask)
