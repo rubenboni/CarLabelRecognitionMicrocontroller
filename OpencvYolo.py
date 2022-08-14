@@ -11,14 +11,16 @@ class Cnn:
 
     def __init__(self,cnn,weights):
         #creamos la red neuronal
-        self.net= cv.dnn.readNetFromDarknet(cnn,weights)
+        self.net = cv.dnn.readNetFromDarknet(cnn,weights)
         self.net.setPreferableBackend(cv.dnn.DNN_BACKEND_OPENCV)
         self.net.setPreferableTarget(cv.dnn.DNN_TARGET_CPU)
 
         self.ln = self.net.getLayerNames()
-
-        self.ln = [self.ln[i[0] - 1] for i in self.net.getUnconnectedOutLayers()]
-
+        
+        self.ln = [self.ln[i-1] for i in self.net.getUnconnectedOutLayers()]
+    
+    
+    
     def load_image(self,imgInput):
 
         #Transformamos la imagen en blob
@@ -28,7 +30,7 @@ class Cnn:
 
         outputs = np.vstack(outputs)
 
-        return self.post_process(imgInput, outputs, 0.7)
+        return self.post_process(imgInput, outputs, 0.5)
     
     def post_process(self,img, outputs, conf):
         H, W = img.shape[:2]

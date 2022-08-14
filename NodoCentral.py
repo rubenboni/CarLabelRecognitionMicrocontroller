@@ -9,7 +9,7 @@ import logging
 import Plate
 
 
-
+#Clase que representa cada caracter de una matrícula
 class DataCharacter:
     img= None
     characterOCR = None
@@ -25,14 +25,12 @@ class DataCharacter:
         return self.img
     
      
-
+#Función encargada de enviar las imágenes a las cámaras
 def sendToCamera(cameraConnection, characterData,cameraSemaphore,semaphoreConnections,listConnections):
     try:
         ip,port = cameraConnection.connection.getpeername()
         print("   ----Enviando foto a "+str(ip)+" con puerto "+str(port))
-        
-        #img = np.zeros((48,48,3))
-        #img[:,:,0]=characterData.getImage()
+    
         input_data = np.array(characterData.getImage(), dtype=np.float32)    
         
         cameraConnection.connection.send(bytes(input_data))
@@ -64,12 +62,11 @@ def sendToCamera(cameraConnection, characterData,cameraSemaphore,semaphoreConnec
 
 red=OpencvYolo.Cnn('yolov4-tiny-custom.cfg','yolov4-tiny-custom_final.weights')
 imgs=[]
-sockets=[]
 semaphoreConnections = threading.BoundedSemaphore(value=1)
-listConnectionsConcurrent=[]
 listConnections=[]
 plates=[]
 
+#El semáforo tiene el número de cámaras que hay conectadas para evitar la espera ocupada
 cameraSemaphore = threading.Semaphore(value=0)
 
 
@@ -81,7 +78,7 @@ threadConnection.start()
 
 
 while True:
-    #copio las conexiones actuales para no tratar con una lista que puede estar cambiando
+   
     semaphoreConnections.acquire()
     lenConnections=len(listConnections)
     semaphoreConnections.release()
@@ -89,37 +86,43 @@ while True:
 
     
     if(lenConnections>0):
-        '''
-        #Esto simula las imagenes, cambiar por obtener las imagenes desde ip steam
-        with open('config.json') as file:
-            config = json.load(file)
-            file.close()
-
-        
-        for camera in config['cameras']:
-            #Esto lo usaré cuando tenga varias cámaras
-            #imgs.append(cv2.VideoCapture("http://"+cameraIP))
-            img = cv2.imread(str(camera["foto"]))
-            imgs.append(img)
-        '''
         semaphoreConnections.acquire()
+        removeConnections=[]
+        #Obtenemos las imágenes de las cámaras
         for c in listConnections:
             try:
                 cap = cv2.VideoCapture('http://'+str(c.ip)+':80/')
                 
-                if (cap is None or not cap.isOpened()):
+                if (not cap.isOpened() or cap is None ):
                     raise ConnectionError
                 
-                ret, frame = cap.read()
+                if (cap.isOpened()):
+                    ret, frame = cap.read()
                 
                 if(frame is not None):
                     imgs.append(frame)
-                    #cv2.imshow("cameraIP: "+str(c.ip),frame)
+                    cv2.imshow("cameraIP: "+str(c.ip),frame)
                 cv2.waitKey(1)
-                cap.release()
+                
+                if (cap.isOpened()):
+                    cap.release()
+                    
             except:
-                cap.release()
+                if (cap.isOpened()):
+                    cap.release()
+                    
+                #Cerramos la conexión y bajamos el contador del semáforo en 1    
+                c.close()
+                cameraSemaphore.acquire()
+                
+                #Añadimos las conexiones que no responden para eliminarlas
+                removeConnections.append(c)
                 continue
+            
+        #Eliminamos las conexiones que no responden
+        for rc in removeConnections:
+            listConnections.remove(rc)
+        
         semaphoreConnections.release()
       
         logging.debug("Imagenes a escanear: "+str(len(imgs))) 
@@ -132,6 +135,7 @@ while True:
         for img in imgs:
             #Pasa a la red la imagen y devuelve las matriculas que vea en la imagen
             logging.debug("Búsqueda de matrícula")
+            
             timestart=time.time() 
             labels=red.load_image(img)
             logging.debug("Tiempo en la búsqueda de la matrícula: "+str(time.time()-timestart)+"s | Matrículas encontradas: "+str(len(labels)))
@@ -139,25 +143,25 @@ while True:
             if (len(labels) == 0):
                 continue
 
-            cv2.imwrite("Matricula.png", labels[0])
 
-            
+            #Segmentación en caracteres la matrícula detectada
+            #Siempre se supone que solamente hay una matrícula en la imagen
             listDataCharacters = [DataCharacter(cv2.resize(characImg,(48,48)), None) for characImg in SplitLabel.Split(labels[0])]
             
             size = len(listDataCharacters)
             
-            
+            #Si no tiene un mínimo de caracteres, se descarta
             if (not(size == 7 or size == 8)):
+                logging.debug("Longitud de la matrícula, no válida")
                 continue
-            
-            '''for index, dc in enumerate(listDataCharacters):
-                cv2.imwrite(str(index)+".jpg", dc.img)'''
 
-            print("Caracteres de la matrícula",size)
+            logging.debug("Caracteres de la matrícula",size)
             
+            #Si no hay ninguna cámara no continúa
             if (len(listDataCharacters) == 0):
                 continue
 
+            #Mientras que no se hayan procesado todos los caracteres
             while (any(dataCharacter.hasProcessed==False for dataCharacter in listDataCharacters)):
             
                     cameraSemaphore.acquire()
@@ -178,37 +182,37 @@ while True:
                         cameraSemaphore.release()
                         continue
 
-                    #buscamos una conexión libre
+                    #Se busca una conexión libre
                     semaphoreConnections.acquire()
                     for c in listConnections:
                         if(c.isAvailable == True):
                             freeConnection = c
                             c.isAvailable = False
                             break;
-                
                     semaphoreConnections.release()
 
-                    #Esto nunca se debería dar
+                    
                     if(freeConnection==None):
-                        print("Se ha salido porque no se ha encontrado ninguna conexión disponible")
+                        logging.debug("No hay ninguna conexión disponible")
                         continue
                         
                 
                     hilo = threading.Thread(target=sendToCamera, args=(freeConnection,dataToProccess,cameraSemaphore,semaphoreConnections,listConnections))
-                    print("EMPIEZA HILO")
+                    logging.debug("Nuevo hilo creado para enviar imágen a una cámara")
                     hilo.start()
 
-            print("Creando matrícula")
+            logging.debug("Datos de la matrícula según una cámara:")
             matricula = Plate.Plate(listDataCharacters)
-            print("¿Es posible esta matrícula? ",matricula.plausible())
-            print("La matrícula es: ",str(matricula)," con probabilidad: ",matricula.getProability()*100,"%")
+            logging.debug("¿Es posible esta matrícula? ",matricula.plausible())
+            logging.debug("La matrícula es: ",str(matricula)," con probabilidad: ",matricula.getProability()*100,"%")
             
             if(matricula.plausible()):
                 plates.append(matricula)
             
             if (matricula.getProability() > 0.98 and matricula.plausible()):
                 break
-            
+        
+        print("Datos de la matrícula :")  
         if(len(plates)>0):
             
             matricula = sorted(plates,key=lambda x:x.getProability())[0]

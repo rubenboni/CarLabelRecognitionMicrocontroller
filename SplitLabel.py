@@ -1,76 +1,101 @@
 
 
+from distutils.archive_util import make_archive
 from os import wait
+from time import sleep
 import cv2
 import sys
 import numpy as np
 import matplotlib.pyplot as plt
+import functools
 
 def Split(src):
     h, w, c = src.shape
-    characters = []
-
-
-
-    mask = cv2.inRange(src,np.array([0,0,0]),np.array([130,130,130])) 
-
-    
-    cv2.imwrite('mask.png',mask)
     
 
+    #src = np.uint8(np.clip((255/src.max() * src ), 0, 255))
 
-    '''gray = cv2.cvtColor(src, cv2.COLOR_RGB2GRAY)
+    cv2.imwrite('Matricula.png',src)
+
+    scale = np.average(src)/128
+    print(scale)
     
-    cv2.imwrite("gray.png",gray)
-    
-    img = cv2.medianBlur(gray,5)'''
-    
-    #_, thresh = cv2.threshold(img, np.mean(img), 255, cv2.THRESH_BINARY+ cv2.THRESH_OTSU)
-    
-    
-    #thresh = cv2.adaptiveThreshold(img, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,cv2.THRESH_BINARY_INV,11,2)
-    
-    #cv2.imwrite("thresh.png",src)
-    
-    output = cv2.connectedComponentsWithStats(mask,cv2.CV_32S)
-    (numLabels, labels, stats, centroids) = output
-    mask = np.zeros(mask.shape,dtype="uint8")
-    
-    for i in range(1,numLabels):
-        x = stats[i, cv2.CC_STAT_LEFT]
-        y = stats[i, cv2.CC_STAT_TOP]       
-        w = stats[i, cv2.CC_STAT_WIDTH]
-        h = stats[i, cv2.CC_STAT_HEIGHT]
-        area = stats[i, cv2.CC_STAT_AREA]
+    blurred = cv2.medianBlur(src, 5)   
+
+    for i in range(0,10):
+
+        characters = []
+         
+        OnlyBlack = cv2.inRange(blurred,(0,0,0),(pow(scale,2)*100+(15*i),pow(scale,2)*100+(15*i),pow(scale,2)*100+(15*i)))
         
-        
-        # ensure the width, height, and area are all neither too small
-    	# nor too big       
-        keepWidth = w > 10 and w < 80
-        keepHeight = h > 80 and h < 220
-        keepArea = area > 1000 and area < 9000
-        
-        '''
-        keepWidth = w > 10 and w < 80
-        keepHeight = h > 80 and h < 220
-        keepArea = area > 1000 and area < 10000
-        '''
-        (cX, cY) = centroids[i]
+        cv2.imwrite('OnlyBlack.png',OnlyBlack)
 
-    	# ensure the connected component we are examining passes all
-    	# three tests
-        if all((keepWidth, keepHeight,keepArea)):
-    		# construct a mask for the current connected component and
-    		# then take the bitwise OR with the mask
-            componentMask = (labels == i).astype("uint8") * 255
+        _, labels = cv2.connectedComponents(OnlyBlack)
+        mask = np.zeros(OnlyBlack.shape, dtype="uint8")
 
-            #cv2.putText(componentMask,"h:"+str(h)+" w:"+str(w)+" area:"+str(area),(20,60), cv2.FONT_ITALIC, 1, (255, 0, 0), 3)
-            mask = cv2.bitwise_or(mask, componentMask)
-            character=componentMask[y:y+h,x:x+w]
-            characters.append((character,x))
+        # Set lower bound and upper bound criteria for characters
+        total_pixels = src.shape[0] * src.shape[1]
+        lower = total_pixels // 260 # heuristic param, can be fine tuned if necessary
+        upper = total_pixels // 20 # heuristic param, can be fine tuned if necessary
+
+        # Loop over the unique components
+        for (i, label) in enumerate(np.unique(labels)):
+            # If this is the background label, ignore it
+            if label == 0:
+                continue
+        
+            # Otherwise, construct the label mask to display only connected component
+            # for the current label
+            labelMask = np.zeros(OnlyBlack.shape, dtype="uint8")
+            labelMask[labels == label] = 255
+            
+            numPixels = cv2.countNonZero(labelMask)
+        
+            # If the number of pixels in the component is between lower bound and upper bound, 
+            # add it to our mask
+            if numPixels > lower and numPixels < upper:
+                mask = cv2.add(mask, labelMask)
+
+        # Find contours and get bounding box for each contour
+        cnts, _ = cv2.findContours(mask.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        boundingBoxes = [cv2.boundingRect(c) for c in cnts]
+
+        # Sort the bounding boxes from left to right, top to bottom
+        # sort by Y first, and then sort by X if Ys are similar
+        def compare(rect1, rect2):
+            if abs(rect1[1] - rect2[1]) > 10:
+                return rect1[1] - rect2[1]
+            else:
+                return rect1[0] - rect2[0]
+            
+        boundingBoxes = sorted(boundingBoxes, key=functools.cmp_to_key(compare) )
+        print(boundingBoxes)
+        print(src.shape)
+        for rect in boundingBoxes:
+            x,y,w,h = rect
+            h_Ori, w_Ori, c_Ori = src.shape
+            
+            keepWidth = w >= w_Ori/30 and w <= w_Ori/8
+            keepHeight = h >= h_Ori/5 and h <= h_Ori/1.2
+            numPixels = cv2.countNonZero(mask[y:y+h, x:x+w])
+            density = numPixels/(h*w)
+            keepDensity = density >= 0.15 and density <= 0.8 
+            
             
 
+            if keepHeight and keepWidth and keepDensity:
+                crop = mask[y:y+h, x:x+w]            
+                characters.append((crop,x))      
+                
+        cv2.imwrite('mask.png',mask)
+     
+        if(len(characters)>= 7):
+            break
+        
+
+
     if(len(characters)==0):
+     
         return []
     else:
         listcharac,_ = zip(*sorted(characters,key =lambda x : x[1]))    

@@ -13,6 +13,9 @@ class CameraConnection:
         self.connection= _connection
         self.ip = _ip
 
+    def close(self):
+        self.connection.close()
+        
 
 
 
@@ -31,9 +34,9 @@ class ThreadConnections (threading.Thread):
     def run(self):
         while True:
             try:
-                logging.debug("Thread connection empieza bucle")
+                logging.debug("Thread connections empieza bucle")
                 socketServer = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                server_address = ("192.168.0.21",12100)
+                server_address = ("192.168.4.1",12100)
                 socketServer.bind(server_address)
                 socketServer.listen(10)
                 print("Escuchando peticiones:")
@@ -48,6 +51,7 @@ class ThreadConnections (threading.Thread):
                     logging.debug("Conexión añadida")
                     self.cameraSemaphore.release()
                     print("Se ha conectado",ipClient, "en el puerto", 12100)
+                    
             except Exception as excep:
                 print("Error iniciando el servidor")
                 logging.exception(excep)
